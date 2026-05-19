@@ -1,0 +1,32 @@
+﻿# Environment files
+.env
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules/
+.next/
+
+# Other workspace projects
+Portfolio_Project/
+Weather-app/
+ai-resume-analyzer/
+frontend/
