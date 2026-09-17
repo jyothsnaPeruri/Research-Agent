@@ -39,13 +39,15 @@ Full page content:
 Answer:"""
 
     # Step 4 — call Groq
+    # llama-3.3-70b-versatile was shut down for free-tier accounts on 16 Aug 2026; Groq recommends gpt-oss-120b.
     response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
+        model=os.getenv("GROQ_MODEL", "openai/gpt-oss-120b"),
         messages=[
             {"role": "system", "content": "You are a helpful research assistant."},
             {"role": "user", "content": prompt}
         ],
-        max_tokens=1024,
+        max_completion_tokens=2048,
+        reasoning_effort="low",
     )
 
     return {
