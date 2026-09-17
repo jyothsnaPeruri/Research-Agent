@@ -3,9 +3,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from agent import run_agent
+from resume import router as resume_router
 import traceback
 
 app = FastAPI()
+
+app.include_router(resume_router)
 
 app.add_middleware(
     CORSMiddleware,
@@ -27,7 +30,7 @@ async def research(request: QueryRequest):
         print("ERROR:", error_details)
         return JSONResponse(
             status_code=500,
-            content={"error": str(e), "details": error_details}
+            content={"error": "The research service hit an error - please try again."}
         )
 
 @app.get("/")

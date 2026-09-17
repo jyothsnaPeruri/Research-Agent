@@ -33,7 +33,7 @@ function hostOf(url: string) {
 
 /** The model appends its own "Sources" list; we render sources separately, so drop it. */
 function stripTrailingSources(text: string) {
-  const m = text.match(/\n\s*(?:\*\*)?(?:sources|references)(?:\*\*)?\s*:?\s*\n[\s\S]*$/i);
+  const m = text.match(/\n\s*(?:#{1,6}\s*)?(?:\*\*)?(?:sources|references)(?:\*\*)?\s*:?\s*\n[\s\S]*$/i);
   return m && m.index !== undefined ? text.slice(0, m.index).trimEnd() : text.trim();
 }
 
@@ -48,9 +48,10 @@ function Cite({ n, sources }: { n: number; sources: Source[] }) {
 }
 
 function Inline({ text, sources }: { text: string; sources: Source[] }): ReactNode {
-  const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`|\[\d+(?:\s*,\s*\d+)*\])/g);
+  const parts = text.split(/(\*\*[^*]+\*\*|\*[^*\s][^*]*\*|`[^`]+`|\[\d+(?:\s*,\s*\d+)*\])/g);
   return parts.map((part, i) => {
     if (part.startsWith("**") && part.endsWith("**")) return <strong key={i}>{part.slice(2, -2)}</strong>;
+    if (part.length > 2 && part.startsWith("*") && part.endsWith("*")) return <em key={i}>{part.slice(1, -1)}</em>;
     if (part.startsWith("`") && part.endsWith("`")) return <code key={i}>{part.slice(1, -1)}</code>;
     const cite = part.match(/^\[(\d+(?:\s*,\s*\d+)*)\]$/);
     if (cite) {
@@ -64,7 +65,8 @@ function Answer({ text, sources }: { text: string; sources: Source[] }) {
   const lines = stripTrailingSources(text).split("\n");
   const blocks: ReactNode[] = [];
   let para: string[] = [];
-  let list: { ordered: boolean; items: string[] } | null = null;
+  let list: { ordered: boolean; start: number; items: string[] } | null = null;
+  let table: string[][] = [];
 
   const flushPara = () => {
     if (para.length) {
@@ -74,27 +76,48 @@ function Answer({ text, sources }: { text: string; sources: Source[] }) {
   };
   const flushList = () => {
     if (list) {
-      const Tag = list.ordered ? "ol" : "ul";
-      blocks.push(
-        <Tag key={blocks.length}>
-          {list.items.map((item, i) => <li key={i}><Inline text={item} sources={sources} /></li>)}
-        </Tag>
-      );
+      const items = list.items.map((item, i) => <li key={i}><Inline text={item} sources={sources} /></li>);
+      blocks.push(list.ordered
+        ? <ol key={blocks.length} start={list.start}>{items}</ol>
+        : <ul key={blocks.length}>{items}</ul>);
       list = null;
+    }
+  };
+
+  const flushTable = () => {
+    if (table.length) {
+      const [head, ...body] = table;
+      blocks.push(
+        <div key={blocks.length} className="table-wrap">
+          <table>
+            <thead><tr>{head.map((c, i) => <th key={i}><Inline text={c} sources={sources} /></th>)}</tr></thead>
+            <tbody>{body.map((row, r) => <tr key={r}>{row.map((c, i) => <td key={i}><Inline text={c} sources={sources} /></td>)}</tr>)}</tbody>
+          </table>
+        </div>
+      );
+      table = [];
     }
   };
 
   for (const raw of lines) {
     const line = raw.trim();
+    if (line.startsWith("|") && line.endsWith("|") && line.length > 2) {
+      flushPara(); flushList();
+      const cells = line.slice(1, -1).split("|").map((c) => c.trim());
+      if (!cells.every((c) => /^:?-{2,}:?$/.test(c))) table.push(cells);  // skip the |---|---| separator row
+      continue;
+    }
+    flushTable();
     if (!line) { flushPara(); flushList(); continue; }
     const heading = line.match(/^#{1,6}\s+(.*)$/);
     if (heading) { flushPara(); flushList(); blocks.push(<h3 key={blocks.length}>{heading[1]}</h3>); continue; }
-    const bullet = line.match(/^(?:[-*•]|\d+[.)])\s+(.*)$/);
+    if (/^(?:-{3,}|\*{3,}|_{3,})$/.test(line)) { flushPara(); flushList(); continue; }
+    const bullet = line.match(/^(?:[-*•]|(\d+)[.)])\s+(.*)$/);
     if (bullet) {
       flushPara();
-      const ordered = /^\d/.test(line);
-      if (!list || list.ordered !== ordered) { flushList(); list = { ordered, items: [] }; }
-      list.items.push(bullet[1]);
+      const ordered = bullet[1] !== undefined;
+      if (!list || list.ordered !== ordered) { flushList(); list = { ordered, start: ordered ? Number(bullet[1]) : 1, items: [] }; }
+      list.items.push(bullet[2]);
       continue;
     }
     flushList();
@@ -102,6 +125,7 @@ function Answer({ text, sources }: { text: string; sources: Source[] }) {
   }
   flushPara();
   flushList();
+  flushTable();
   return <div className="answer text-[15px] leading-relaxed">{blocks}</div>;
 }
 
@@ -226,7 +250,7 @@ export default function Home() {
           <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
             Ask anything.
             <br />
-            <span className="text-accent">Get a cited answer.</span>
+            <span className="gradient-text">Get a cited answer.</span>
           </h1>
           <p className="mx-auto mt-3 max-w-md text-[15px] text-muted">
             The agent searches the live web, reads the top sources and writes an answer with
@@ -247,7 +271,7 @@ export default function Home() {
               </svg>
               <input
                 ref={inputRef}
-                className="focus-ring w-full rounded-2xl border border-border bg-surface-2 py-3.5 pl-11 pr-12 text-[15px] text-text placeholder:text-muted"
+                className="focus-ring w-full rounded-2xl border border-border bg-surface-2 py-3.5 pl-11 pr-12 text-[15px] text-text placeholder:text-muted focus:border-accent"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="What do you want to research?"
@@ -255,17 +279,17 @@ export default function Home() {
                 maxLength={400}
                 disabled={loading}
               />
-              <kbd className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 rounded-md border border-border bg-surface px-1.5 py-0.5 text-[11px] text-muted sm:block">
+              <kbd className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 rounded-md border border-border bg-surface-2 px-1.5 py-0.5 text-[11px] text-muted sm:block">
                 /
               </kbd>
             </label>
             <button
               type="submit"
               disabled={loading || !query.trim()}
-              className="focus-ring inline-flex items-center justify-center gap-2 rounded-2xl bg-accent px-5 py-3.5 text-sm font-medium text-white transition hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-50"
+              className="btn-accent focus-ring inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50"
             >
               {loading ? (
-                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-on-accent/30 border-t-on-accent" />
               ) : (
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M5 12h14" /><path d="m13 6 6 6-6 6" />
@@ -303,10 +327,10 @@ export default function Home() {
                     <div key={s.key} className="flex items-center gap-2">
                       <span
                         className={`inline-flex h-6 items-center gap-1.5 rounded-full px-2.5 text-xs font-medium transition ${
-                          state === "todo" ? "bg-surface-2 text-muted" : "bg-accent text-white"
+                          state === "todo" ? "bg-surface-2 text-muted" : "bg-accent text-on-accent"
                         }`}
                       >
-                        {state === "done" ? "✓" : state === "active" ? <span className="h-1.5 w-1.5 rounded-full bg-white pulse" /> : null}
+                        {state === "done" ? "✓" : state === "active" ? <span className="h-1.5 w-1.5 rounded-full bg-on-accent pulse" /> : null}
                         {s.label}
                       </span>
                       {i < STEPS.length - 1 && <span className="h-px w-4 bg-border" />}
@@ -416,7 +440,7 @@ export default function Home() {
           <a href="https://jyothsnaperuri.github.io/Jyothsna-portfolio/" className="text-accent-text hover:underline" target="_blank" rel="noopener noreferrer">
             Jyothsna (Jo) Peruri
           </a>{" "}
-          · FastAPI · Groq (Llama 3.3 70B) · Tavily · Next.js ·{" "}
+          · FastAPI · Groq (gpt-oss-120b) · Tavily · Next.js ·{" "}
           <a href="https://github.com/jyothsnaPeruri/Research-Agent" className="text-accent-text hover:underline" target="_blank" rel="noopener noreferrer">
             Source
           </a>

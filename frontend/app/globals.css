@@ -1,39 +1,23 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #f6f6fb;
-  --surface: #ffffff;
-  --surface-2: #f0f0f8;
-  --border: #e3e3ee;
-  --text: #14141f;
-  --muted: #6a6a82;
-  --accent: #5457d6;
-  --accent-strong: #4144c2;
-  --accent-soft: #ebebff;
-  --accent-text: #3d40b3;
-  --success: #1f9d61;
-  --danger: #d23c3c;
-  --ring: rgba(84, 87, 214, 0.35);
-  --shadow: 0 1px 2px rgba(20, 20, 40, 0.04), 0 10px 30px -14px rgba(20, 20, 40, 0.2);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0a0a12;
-    --surface: #12121c;
-    --surface-2: #191927;
-    --border: #262637;
-    --text: #ebebf5;
-    --muted: #9b9bb4;
-    --accent: #8d90ff;
-    --accent-strong: #a6a8ff;
-    --accent-soft: #1c1c3c;
-    --accent-text: #bdbfff;
-    --success: #3ccf85;
-    --danger: #ff6b6b;
-    --ring: rgba(141, 144, 255, 0.4);
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 14px 36px -14px rgba(0, 0, 0, 0.7);
-  }
+  --bg: #0c1222;
+  --surface: rgba(255, 255, 255, 0.055);
+  --surface-2: rgba(255, 255, 255, 0.04);
+  --border: rgba(255, 255, 255, 0.09);
+  --text: #e8ecf6;
+  --muted: #98a3bd;
+  --accent: #5cc3b3;
+  --accent-strong: #79d3c5;
+  --accent-soft: rgba(92, 195, 179, 0.14);
+  --accent-text: #8edcd0;
+  --on-accent: #0a1320;
+  --indigo: #8a86f0;
+  --rose: #d98aa6;
+  --success: #5cd39b;
+  --danger: #ef8a86;
+  --ring: rgba(92, 195, 179, 0.35);
+  --shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 20px 50px -24px rgba(0, 0, 0, 0.7);
 }
 
 @theme inline {
@@ -47,6 +31,7 @@
   --color-accent-strong: var(--accent-strong);
   --color-accent-soft: var(--accent-soft);
   --color-accent-text: var(--accent-text);
+  --color-on-accent: var(--on-accent);
   --color-success: var(--success);
   --color-danger: var(--danger);
   --font-sans: var(--font-geist-sans);
@@ -54,13 +39,26 @@
 }
 
 html {
-  color-scheme: light dark;
+  color-scheme: dark;
+  background: #0c1222;
+  min-height: 100%;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(720px 520px at 12% -6%, rgba(92, 195, 179, 0.20), transparent 62%),
+    radial-gradient(760px 540px at 92% 2%, rgba(138, 134, 240, 0.20), transparent 60%),
+    radial-gradient(900px 620px at 55% 112%, rgba(217, 138, 166, 0.13), transparent 62%),
+    linear-gradient(180deg, #0c1222 0%, #0e1530 55%, #111632 100%);
 }
 
 body {
-  background:
-    radial-gradient(1200px 600px at 50% -200px, var(--accent-soft), transparent 70%),
-    var(--bg);
+  background: transparent;
   color: var(--text);
   font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -71,7 +69,23 @@ body {
   border: 1px solid var(--border);
   border-radius: 20px;
   box-shadow: var(--shadow);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
+
+.gradient-text {
+  background: linear-gradient(95deg, var(--accent-strong) 0%, var(--indigo) 55%, var(--rose) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.btn-accent {
+  background: linear-gradient(135deg, var(--accent) 0%, #6fa9d6 100%);
+  color: var(--on-accent);
+  box-shadow: 0 10px 24px -12px rgba(92, 195, 179, 0.6);
+}
+.btn-accent:hover { background: linear-gradient(135deg, var(--accent-strong) 0%, #86b9e0 100%); }
 
 .focus-ring:focus-visible {
   outline: none;
@@ -98,9 +112,15 @@ body {
 }
 .cite:hover {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
+.answer em { font-style: italic; color: var(--text); }
+.answer .table-wrap { overflow-x: auto; margin: 0 0 0.95rem; border: 1px solid var(--border); border-radius: 12px; }
+.answer table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+.answer th, .answer td { padding: 0.55rem 0.75rem; text-align: left; vertical-align: top; border-bottom: 1px solid var(--border); }
+.answer th { background: var(--accent-soft); color: var(--accent-text); font-weight: 600; white-space: nowrap; }
+.answer tr:last-child td { border-bottom: 0; }
 .answer p { margin: 0 0 0.85rem; }
 .answer p:last-child { margin-bottom: 0; }
 .answer h3 { font-weight: 600; font-size: 1rem; margin: 1.1rem 0 0.4rem; }
